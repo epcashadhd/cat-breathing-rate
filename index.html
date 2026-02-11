@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>貓咪呼吸計數器</title>
+    <style>
+        :root {
+            --app-height: 100dvh;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "TC", "Heiti TC", "微軟正黑體", sans-serif;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: var(--app-height);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            text-align: center;
+            width: 88%;
+            max-width: 340px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center; /* 讓所有物件置中 */
+        }
+        h1 { 
+            color: #2c3e50; 
+            font-size: 22px; 
+            margin: 10px 0 20px 0; 
+            font-weight: 600; 
+        }
+        
+        /* 時間選擇器 */
+        .time-selector {
+            display: flex;
+            justify-content: space-between;
+            background: #f0f0f5;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .time-option {
+            flex: 1;
+            padding: 10px 0;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .time-option.active {
+            background: white;
+            color: #007aff;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 資訊面板 */
+        .info-panel {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .info-box { font-size: 13px; }
+        .info-value { font-size: 20px; font-weight: bold; color: #333; display: block; margin-top: 4px;}
+
+        /* 主要按鈕 */
+        .main-btn {
+            background-color: #007aff;
+            color: white;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,122,255,0.25);
+            transition: transform 0.1s;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .main-btn:active { transform: scale(0.92); }
+        .main-btn.counting { background-color: #34c759; box-shadow: 0 8px 20px rgba(52, 199, 89, 0.25); } 
+        .main-btn.finished { background-color: #ff9500; cursor: default; box-shadow: none; }
+        
+        .btn-label { font-size: 26px; font-weight: bold; pointer-events: none; }
+        .btn-sub { font-size: 12px; opacity: 0.9; margin-top: 4px; pointer-events: none; }
+
+        /* 結果顯示區 */
+        .result-area {
+            margin-top: 15px;
+            height: 60px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .result-text { font-size: 14px; color: #888; }
+        .result-number { font-size: 36px; font-weight: 800; color: #2c3e50; line-height: 1.2; }
+        
+        /* --- 新增：重置按鈕樣式與動畫 --- */
+        .reset-btn {
+            margin-top: 20px;
+            background-color: #f2f2f7; /* 淺灰色背景 */
+            color: #8e8e93;
+            padding: 12px 40px;       /* 增加寬度 */
+            border-radius: 25px;      /* 膠囊形狀 */
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            
+            /* 動畫設定 */
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        /* 按下時的放大效果 */
+        .reset-btn:active {
+            transform: scale(1.15);   /* 放大 1.15 倍 */
+            background-color: #e5e5ea;
+            color: #333;              /* 文字變深 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* 波紋動畫 */
+        @keyframes ripple {
+            0% { transform: scale(0); opacity: 0.5; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        .ripple {
+            position: absolute;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            pointer-events: none;
+            animation: ripple 0.4s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>貓咪呼吸計數器</h1>
+
+        <div class="time-selector">
+            <div class="time-option active" onclick="setDuration(15, this)">15秒</div>
+            <div class="time-option" onclick="setDuration(30, this)">30秒</div>
+            <div class="time-option" onclick="setDuration(45, this)">45秒</div>
+            <div class="time-option" onclick="setDuration(60, this)">1分鐘</div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-box">剩餘時間 <span class="info-value" id="timerDisplay">15</span></div>
+            <div class="info-box">目前次數 <span class="info-value" id="countDisplay">0</span></div>
+        </div>
+
+        <div class="main-btn" id="actionBtn">
+            <span class="btn-label" id="btnText">開始</span>
+            <span class="btn-sub" id="btnSubText">點擊開始</span>
+        </div>
+
+        <div class="result-area">
+            <div id="resultContainer" style="display:none;">
+                <div class="result-text">每分鐘呼吸次數 (BPM)</div>
+                <div class="result-number" id="finalResult">--</div>
+            </div>
+        </div>
+
+        <div class="reset-btn" onclick="resetAll()">重置 (Reset)</div>
+    </div>
+
+    <script>
+        let selectedDuration = 15;
+        let timeLeft = 15;
+        let count = 0;
+        let state = 'idle'; 
+        let timerInterval;
+
+        const timerDisplay = document.getElementById('timerDisplay');
+        const countDisplay = document.getElementById('countDisplay');
+        const actionBtn = document.getElementById('actionBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSubText = document.getElementById('btnSubText');
+        const resultContainer = document.getElementById('resultContainer');
+        const finalResult = document.getElementById('finalResult');
+
+        function setDuration(seconds, element) {
+            if (state === 'running') return;
+            document.querySelectorAll('.time-option').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            selectedDuration = seconds;
+            resetAll();
+        }
+
+        actionBtn.addEventListener('touchstart', function(e) {
+            e.preventDefault(); 
+            handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        actionBtn.addEventListener('click', function(e) {
+            handleInteraction(e.clientX, e.clientY);
+        });
+
+        function handleInteraction(x, y) {
+            if (state === 'finished') return;
+
+            const ripple = document.createElement("div");
+            ripple.classList.add("ripple");
+            const rect = actionBtn.getBoundingClientRect();
+            ripple.style.left = `${x - rect.left - 50}px`;
+            ripple.style.top = `${y - rect.top - 50}px`;
+            actionBtn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 500);
+
+            if (state === 'idle') {
+                startTimer();
+            } else if (state === 'running') {
+                incrementCount();
+            }
+        }
+
+        function startTimer() {
+            state = 'running';
+            count = 0;
+            
+            actionBtn.classList.add('counting');
+            btnText.innerText = "呼吸";
+            btnSubText.innerText = "吸氣請點擊";
+            
+            timeLeft = selectedDuration;
+            timerDisplay.innerText = timeLeft;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.innerText = timeLeft;
+                if (timeLeft <= 0) finishTimer();
+            }, 1000);
+        }
+
+        function incrementCount() {
+            count++;
+            countDisplay.innerText = count;
+            actionBtn.style.transform = "scale(0.92)";
+            setTimeout(() => actionBtn.style.transform = "scale(1)", 80);
+        }
+
+        function finishTimer() {
+            clearInterval(timerInterval);
+            state = 'finished';
+            actionBtn.classList.remove('counting');
+            actionBtn.classList.add('finished');
+            btnText.innerText = "完成";
+            btnSubText.innerText = "查看結果";
+            
+            let bpm = Math.round((count / selectedDuration) * 60);
+            finalResult.innerText = bpm;
+            resultContainer.style.display = "block";
+        }
+
+        function resetAll() {
+            clearInterval(timerInterval);
+            state = 'idle';
+            timeLeft = selectedDuration;
+            count = 0;
+            timerDisplay.innerText = timeLeft;
+            countDisplay.innerText = 0;
+            
+            actionBtn.className = "main-btn";
+            btnText.innerText = "開始";
+            btnSubText.innerText = "點擊開始";
+            actionBtn.style.transform = "scale(1)";
+            
+            resultContainer.style.display = "none";
+        }
+    </script>
+</body>
+</html>
