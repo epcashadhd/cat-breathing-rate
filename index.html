@@ -34,7 +34,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            align-items: center; /* 讓所有物件置中 */
+            align-items: center;
         }
         h1 { 
             color: #2c3e50; 
@@ -43,7 +43,7 @@
             font-weight: 600; 
         }
         
-        /* 時間選擇器 */
+        /* Time Selector */
         .time-selector {
             display: flex;
             justify-content: space-between;
@@ -69,7 +69,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* 資訊面板 */
+        /* Info Panel */
         .info-panel {
             display: flex;
             justify-content: space-around;
@@ -80,7 +80,7 @@
         .info-box { font-size: 13px; }
         .info-value { font-size: 20px; font-weight: bold; color: #333; display: block; margin-top: 4px;}
 
-        /* 主要按鈕 */
+        /* Main Button */
         .main-btn {
             background-color: #007aff;
             color: white;
@@ -107,7 +107,7 @@
         .btn-label { font-size: 26px; font-weight: bold; pointer-events: none; }
         .btn-sub { font-size: 12px; opacity: 0.9; margin-top: 4px; pointer-events: none; }
 
-        /* 結果顯示區 */
+        /* Result Area */
         .result-area {
             margin-top: 15px;
             height: 60px;
@@ -120,31 +120,35 @@
         .result-text { font-size: 14px; color: #888; }
         .result-number { font-size: 36px; font-weight: 800; color: #2c3e50; line-height: 1.2; }
         
-        /* --- 新增：重置按鈕樣式與動畫 --- */
+        /* --- Reset Button Fixed --- */
         .reset-btn {
             margin-top: 20px;
-            background-color: #f2f2f7; /* 淺灰色背景 */
+            background-color: #f2f2f7; 
             color: #8e8e93;
-            padding: 12px 40px;       /* 增加寬度 */
-            border-radius: 25px;      /* 膠囊形狀 */
+            padding: 12px 40px;       
+            border-radius: 25px;      
             font-size: 15px;
             font-weight: 500;
             cursor: pointer;
-            user-select: none;
+            user-select: none; /* Prevents text selection on long press */
+            -webkit-user-select: none;
+            touch-action: manipulation;
             
-            /* 動畫設定 */
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            /* Smooth transition */
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
         }
 
-        /* 按下時的放大效果 */
-        .reset-btn:active {
-            transform: scale(1.15);   /* 放大 1.15 倍 */
+        /* iPhone Fix: 
+           Instead of relying only on :active, we add a class '.pressed' via JS 
+        */
+        .reset-btn:active, 
+        .reset-btn.pressed {
+            transform: scale(1.15);   
             background-color: #e5e5ea;
-            color: #333;              /* 文字變深 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: #333;             
         }
 
-        /* 波紋動畫 */
+        /* Ripple Effect */
         @keyframes ripple {
             0% { transform: scale(0); opacity: 0.5; }
             100% { transform: scale(2.5); opacity: 0; }
@@ -189,7 +193,7 @@
             </div>
         </div>
 
-        <div class="reset-btn" onclick="resetAll()">重置 (Reset)</div>
+        <div class="reset-btn" id="resetBtn">重置 (Reset)</div>
     </div>
 
     <script>
@@ -206,6 +210,35 @@
         const btnSubText = document.getElementById('btnSubText');
         const resultContainer = document.getElementById('resultContainer');
         const finalResult = document.getElementById('finalResult');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // --- iPhone Animation Fix Code ---
+        
+        // 1. Touch Start: Add 'pressed' class immediately
+        resetBtn.addEventListener('touchstart', function(e) {
+            this.classList.add('pressed');
+        }, {passive: true});
+
+        // 2. Touch End: Remove class and execute reset
+        resetBtn.addEventListener('touchend', function(e) {
+            this.classList.remove('pressed');
+            // Slight delay to ensure animation is seen if tapped very quickly
+            setTimeout(resetAll, 50); 
+        });
+
+        // 3. Mouse events (for Desktop compatibility)
+        resetBtn.addEventListener('mousedown', function() {
+            this.classList.add('pressed');
+        });
+        resetBtn.addEventListener('mouseup', function() {
+            this.classList.remove('pressed');
+            resetAll();
+        });
+        resetBtn.addEventListener('mouseleave', function() {
+            this.classList.remove('pressed');
+        });
+
+        // ---------------------------------
 
         function setDuration(seconds, element) {
             if (state === 'running') return;
@@ -221,6 +254,9 @@
         }, { passive: false });
 
         actionBtn.addEventListener('click', function(e) {
+            // Prevent double firing on devices that trigger both
+            // We rely on touchstart for mobile, click for desktop
+            if (e.detail === 0) return; // detail 0 often means simulated click
             handleInteraction(e.clientX, e.clientY);
         });
 
